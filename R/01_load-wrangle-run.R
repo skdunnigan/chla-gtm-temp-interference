@@ -145,7 +145,7 @@ Fr <- function(x, y){
 }
 
 dat_corr <- dat2 %>%
-  mutate(chla_r = Fr(temp_c, chla_rfu))
+            mutate(chla_r = Fr(temp_c, chla_rfu))
 
 # 07 create plot with corrected chlorophyll data --------------------------
 
@@ -153,9 +153,9 @@ b <- dat_corr %>%
   ggplot(mapping = aes(x = temp_c, y = chla_r, color = dilution_percent)) +
   geom_point(size = 3) +
   stat_smooth(method = "lm", se = FALSE) +
-  ggpubr::stat_regline_equation(label.y.npc = 'bottom', show.legend = FALSE) +
+  # ggpubr::stat_regline_equation(label.y.npc = 'bottom', show.legend = FALSE) +
   scale_color_discrete(name = "Dilution Factor") +
-  xlim(0, 40) +
+  # xlim(0, 40) +
   theme_bw() +
   theme(legend.position = "right",
         axis.title = element_text(size = 12)) +
