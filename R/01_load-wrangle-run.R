@@ -12,13 +12,12 @@ dat <- readxl::read_xlsx(here::here('data', 'data.xlsx')) %>%
        janitor::clean_names() %>%
        dplyr::mutate(dilution_percent = forcats::as_factor(dilution_percent))
 
-chla_c <- 321 # enter starting concentration of chlorophyll in collection sample
 Tr <- 20 # enter reference temperature
 
 # 02 create dilution plot ----------------------------------------------------
 
 ## 02.1 create plotting function, call it 'lin_plot()' ----
-lin_plot <- function(temp, y) {
+lin_plot <- function(x) {
 
 chla_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L"))
 chla_RFU_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L", " RFU"))
@@ -29,7 +28,7 @@ chla_RFU_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L", " RFU
     stat_smooth(method = "lm", se = FALSE) +
     # ggpubr::stat_regline_equation(label.y.npc = 'bottom', show.legend = FALSE, size = 5) +
     scale_color_discrete(name = "Dilution Factor") +
-    xlim(0, 40) +
+    # xlim(0, 40) +
     theme_bw() +
     theme(legend.position = "right",
           axis.title = element_text(size = 12),
@@ -82,6 +81,8 @@ rm(m, b, lm_out, diag)
 
 dat2 <- dat %>%
         dplyr::mutate(delta_T = temp_c - Tr)
+
+chla_RFU_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L", " RFU"))
 
 dat2 %>%
   ggplot(mapping = aes(x = delta_T, y = chla_rfu, color = dilution_percent)) +
@@ -137,12 +138,14 @@ p_exp <- paste0(round(p, digits = 3), "??", round(p_sd, digits = 3))
 
 # 06 apply adjustment to chla values --------------------------------------
 
-chla_c <- function(x, y){
+# Equation 1 from Watras et al. 2011:
+
+Fr <- function(x, y){
   y / (1 + p*(x - Tr))
 }
 
 dat_corr <- dat2 %>%
-  mutate(chla_r = chla_c(temp_c, chla_rfu))
+  mutate(chla_r = Fr(temp_c, chla_rfu))
 
 # 07 create plot with corrected chlorophyll data --------------------------
 
