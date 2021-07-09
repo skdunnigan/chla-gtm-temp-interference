@@ -3,45 +3,74 @@
 
 # 00 load-packages -----------------------------------------------------------
 # uncomment below if you need to load packages to run this code
-source('R/00_load-packages.R')
+# source('R/00_load-packages.R')
 
 
 # 01 load-data ---------------------------------------------------------------
 
-dat <- readxl::read_xlsx(here::here('data', 'data.xlsx')) %>%
+dat <- readxl::read_xlsx(here::here('data', 'gtmpcwq_temp.xlsx')) %>%
        janitor::clean_names() %>%
-       dplyr::mutate(dilution_percent = forcats::as_factor(dilution_percent))
+       dplyr::rename(chla_rfu = chlorophyll_rfu) %>%
+       dplyr::mutate(conc = conc * 100,
+                     conc = factor(conc,
+                                   levels = c('100',
+                                              '50',
+                                              '25',
+                                              '0')))
 
 Tr <- 20 # enter reference temperature
 
 # 02 create initial dilution plot ----------------------------------------------------
 
+## load titles
 chla_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L"))
 chla_RFU_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L", " RFU"))
 
 plot.a <- dat %>%
             ggplot(mapping = aes(x = temp_c, y = chla_rfu)) +
-            stat_smooth(method = "lm", aes(color = dilution_percent), se = FALSE) +
-            geom_point(size = 3) +
-            scale_color_discrete(name = "Dilution Factor") +
+            geom_point() +
+            stat_smooth(method = "lm", aes(color = conc),
+                        se = FALSE,
+                        fullrange = T) +
+            xlim(5,33) +
             theme_bw() +
-            theme(legend.position = "right",
-                  axis.title = element_text(size = 12),
-                  text = element_text(size = 12)) +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12, color = 'black'),
+                  axis.title = element_text(size = 12)) +
             labs(y = chla_RFU_title,
-                 x = 'Temperature ('~degree*C*')')
+                 x = 'Temperature ('~degree*C*')') +
+            annotate("text",
+                     x = 32.6,
+                     y = 3.75,
+                     size = 4,
+                     label = "100 %") +
+            annotate("text",
+                     x = 32.6,
+                     y = 2.35,
+                     size = 4,
+                     label = "50 %") +
+            annotate("text",
+                     x = 32.6,
+                     y = 1.9,
+                     size = 4,
+                     label = "25 %") +
+            annotate("text",
+                     x = 32.6,
+                     y = 1.7,
+                     size = 4,
+                     label = "blank")
 plot.a
-
+# ggsave(here::here('output', 'plotA.png'), plot = plot.a, dpi = 300)
 # 03 assess for slope:intercept constant across all concentrations ---------------------------------------
 
-## linear regression model on all dilution_percent groups and clean output with `broom::tidy()`
+## linear regression model on all concentrations and clean output with `broom::tidy()`
 ## additional diagnostics with `broom::glance()` function
 lm_out <- dat %>%
-          dplyr::group_by(dilution_percent) %>%
+          dplyr::group_by(conc) %>%
           do(broom::tidy(lm(chla_rfu ~ temp_c, data = .)))
 
   diag <- dat %>%
-          group_by(dilution_percent) %>%
+          group_by(conc) %>%
           do(broom::glance(lm(chla_rfu ~ temp_c, data = .)))
 
 ##check out model outputs
@@ -56,30 +85,51 @@ m <- lm_out %>%
 
 b <- lm_out %>%
       dplyr::filter(term == '(Intercept)') %>%
-      dplyr::select(dilution_percent, estimate) %>%
+      dplyr::select(conc, estimate) %>%
       dplyr::rename(b = estimate)
 
 ## examine slope:intercept ratios for each dilution: are they constant?
-ratios <- dplyr::left_join(m, b, by = "dilution_percent") %>%
+ratios <- dplyr::left_join(m, b, by = "conc") %>%
           dplyr::mutate(ratio = m/b)
 
+## export statistic tables by uncommenting the following lines of code:
+# write.csv(lm_out, here::here('output', 'lm_output1_raw.csv'))
+# write.csv(diag, here::here('output', 'lm_output2_raw.csv'))
+# write.csv(ratios, here::here('output', 'lm-stats-ratios.csv'))
+
 # remove unnecessary df
-rm(m, b, lm_out, diag)
+# rm(m, b, lm_out, diag)
 
 # derive p ----------------------------------------------------------------
 
 plot.b <- ratios %>%
             ggplot(aes(x = b, y = m)) +
-            geom_point(aes(color = dilution_percent), size = 3) +
+            geom_point(aes(color = conc), size = 3) +
             stat_smooth(method = "lm", se = FALSE, color = "black") +
-            scale_color_discrete(name = "Dilution Factor") +
             theme_bw() +
-            theme(legend.position = "right",
+            theme(legend.position = "none",
                   axis.title = element_text(size = 12),
                   text = element_text(size = 12)) +
-            labs(x = "Intercept",
-                 y = "Slope")
+            labs(x = "Intercept (b)",
+                 y = "Slope (m)") +
+            annotate("text",
+                     x = 2.4,
+                     y = -0.0195,
+                     label = "blank") +
+            annotate("text",
+                     x = 3.25,
+                     y = -0.0425,
+                     label = "25 %") +
+            annotate("text",
+                     x = 3.8,
+                     y = -0.0475,
+                     label = "50 %") +
+            annotate("text",
+                     x = 4.5,
+                     y = -0.026,
+                     label = "100 %")
 plot.b
+# ggsave(here::here('output', 'slope-intercept.png'), plot = plot.b, dpi = 120)
 
 ## calculate slope for slope ( = y) vs intercept ( = x) of the relationship
 
@@ -89,7 +139,6 @@ p.lm.origin <- ratios %>% lm(m ~ 0 + b, data = .)
 p.lm.tidy <- broom::tidy(p.lm)
 
 p.lm.origin <- broom::tidy(p.lm.origin)
-
 
 ## get p
 
@@ -118,29 +167,83 @@ dat_corr <- dat %>%
 
 plot.c <- dat_corr %>%
             ggplot(mapping = aes(x = temp_c, y = chla_r)) +
-            stat_smooth(method = "lm", aes(color = dilution_percent), se = FALSE) +
-            geom_point(size = 3) +
-            scale_color_discrete(name = "Dilution Factor") +
+            geom_point() +
+            stat_smooth(method = "lm", aes(color = conc),
+                        se = FALSE,
+                        fullrange = T) +
+            xlim(5,34) +
             theme_bw() +
-            theme(legend.position = "right",
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12, color = 'black'),
                   axis.title = element_text(size = 12)) +
             labs(y = chla_RFU_title,
-                 x = 'Temperature ('~degree*C*')')
+                 x = 'Temperature ('~degree*C*')') +
+            annotate("text",
+                     x = 33,
+                     y = 4,
+                     size = 4,
+                     label = "100 %") +
+            annotate("text",
+                     x = 33,
+                     y = 2.5,
+                     size = 4,
+                     label = "50 %") +
+            annotate("text",
+                     x = 33,
+                     y = 2.1,
+                     size = 4,
+                     label = "25 %") +
+            annotate("text",
+                     x = 33,
+                     y = 1.8,
+                     size = 4,
+                     label = "blank")
 plot.c
+
+# ggsave(here::here('output', 'plotB.png'), plot = plot.c, dpi = 300)
 
 plot.d <- dat_corr %>%
             ggplot(mapping = aes(x = temp_c, y = chla_r_origin)) +
-            stat_smooth(method = "lm", aes(color = dilution_percent), se = FALSE) +
-            geom_point(size = 3) +
-            scale_color_discrete(name = "Dilution Factor") +
+            geom_point() +
+            stat_smooth(method = "lm", aes(color = conc),
+                        se = FALSE,
+                        fullrange = T) +
+            xlim(5,34) +
             theme_bw() +
-            theme(legend.position = "right",
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12, color = 'black'),
                   axis.title = element_text(size = 12)) +
             labs(y = chla_RFU_title,
-                 x = 'Temperature ('~degree*C*')')
+                 x = 'Temperature ('~degree*C*')') +
+            annotate("text",
+                     x = 33,
+                     y = 4.25,
+                     size = 4,
+                     label = "100 %") +
+            annotate("text",
+                     x = 33,
+                     y = 2.65,
+                     size = 4,
+                     label = "50 %") +
+            annotate("text",
+                     x = 33,
+                     y = 2.2,
+                     size = 4,
+                     label = "25 %") +
+            annotate("text",
+                     x = 33,
+                     y = 1.9,
+                     size = 4,
+                     label = "blank")
 plot.d
 
+ggsave(here::here('output', 'plotC.png'), plot = plot.d, dpi = 300)
 
+all <- ((plot.a + labs(title = "A")) + ((plot.c + labs(x = '', y = '', title = "B")) / (plot.d + labs(y = '', title = "C")))) +
+  plot_annotation(caption = "Figure 1: Temperature quenching of chlorophyll (A) fluorescence in unfiltered water from Pellicer Creek, Florida.\n In panels (B, C) the temperature quench was removed by adjusting the raw data to a reference temperature of 20 ('~*degree*C') using Eq. 1.")
+
+# ggsave(here::here('output', 'multiplot.png', plot = all, dpi = 300))
 # 08 goodness of fit ------------------------------------------------------
+
 
 
