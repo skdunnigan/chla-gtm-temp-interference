@@ -3,7 +3,7 @@
 
 # 00 load-packages -----------------------------------------------------------
 # uncomment below if you need to load packages to run this code
-# source('R/00_load-packages.R')
+source('R/00_load-packages.R')
 
 
 # 01 load-data ---------------------------------------------------------------
@@ -24,7 +24,7 @@ Tr <- 20 # enter reference temperature
 
 ## load titles
 chla_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L"))
-chla_RFU_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L", " RFU"))
+chla_RFU_title <- expression(paste("Chlorophyll ", italic(" a "), " RFU"))
 
 plot.a <- dat %>%
             ggplot(mapping = aes(x = temp_c, y = chla_rfu)) +
@@ -244,9 +244,9 @@ all <- ((plot.a + labs(title = "A")) + ((plot.c + labs(x = '', y = '', title = "
 
 # ggsave(here::here('output', 'multiplot.png', plot = all, dpi = 300))
 
-plot.f <- (plot.a + labs(x = '', y = '', title = 'A')) / (plot.d + labs(y = '', title = 'B'))
+plot.f <- (plot.a + labs(x = '', title = 'A')) / (plot.d + labs(title = 'B'))
 
-ggsave(here::here('output', 'poster-plot2.png'), plot = plot.f, dpi = 300)
+ggsave(here::here('output', 'poster-plot.png'), plot = plot.f, dpi = 300)
 # 08 goodness of fit ------------------------------------------------------
 
 
