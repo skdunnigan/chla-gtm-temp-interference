@@ -3,7 +3,7 @@
 
 # 00 load-packages -----------------------------------------------------------
 # uncomment below if you need to load packages to run this code
-# source('R/00_load-packages.R')
+source('R/00_load-packages.R')
 
 
 # 01 load-data ---------------------------------------------------------------
@@ -24,7 +24,7 @@ Tr <- 20 # enter reference temperature
 
 ## load titles
 chla_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L"))
-chla_RFU_title <- expression(paste("Chlorophyll ", italic("a "), mu*"g/L", " RFU"))
+chla_RFU_title <- expression(paste("Chlorophyll ", italic(" a "), " RFU"))
 
 plot.a <- dat %>%
             ggplot(mapping = aes(x = temp_c, y = chla_rfu)) +
@@ -40,22 +40,22 @@ plot.a <- dat %>%
             labs(y = chla_RFU_title,
                  x = 'Temperature ('~degree*C*')') +
             annotate("text",
-                     x = 32.6,
+                     x = 33,
                      y = 3.75,
                      size = 4,
                      label = "100 %") +
             annotate("text",
-                     x = 32.6,
+                     x = 33,
                      y = 2.35,
                      size = 4,
                      label = "50 %") +
             annotate("text",
-                     x = 32.6,
+                     x = 33,
                      y = 1.9,
                      size = 4,
                      label = "25 %") +
             annotate("text",
-                     x = 32.6,
+                     x = 33,
                      y = 1.7,
                      size = 4,
                      label = "blank")
@@ -243,6 +243,10 @@ all <- ((plot.a + labs(title = "A")) + ((plot.c + labs(x = '', y = '', title = "
   plot_annotation(caption = "Figure 1: Temperature quenching of chlorophyll (A) fluorescence in unfiltered water from Pellicer Creek, Florida.\n In panels (B, C) the temperature quench was removed by adjusting the raw data to a reference temperature of 20 ('~*degree*C') using Eq. 1.")
 
 # ggsave(here::here('output', 'multiplot.png', plot = all, dpi = 300))
+
+plot.f <- (plot.a + labs(x = '', title = 'A')) / (plot.d + labs(title = 'B'))
+
+ggsave(here::here('output', 'poster-plot.png'), plot = plot.f, dpi = 300)
 # 08 goodness of fit ------------------------------------------------------
 
 
